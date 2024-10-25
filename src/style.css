@@ -1,0 +1,130 @@
+body {
+
+  background: #323330;
+  color: white;
+  font-family: "Montserrat", serif;
+
+}
+
+
+
+
+.container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.logo-container {
+
+  margin-top: 20px;
+  margin-bottom: 5px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+
+}
+
+.title {
+
+  font-family: "Trade Winds", serif;
+  font-size: 28px;
+  font-weight: 400;
+  color: #f9dc3e;
+  margin-left: 20px;
+  
+
+}
+
+.title_logo {
+  width: 60px;
+}
+
+
+.sub-title {
+  font-weight: 100;
+  font-style: italic;
+  font-size: 12px;
+  margin-bottom: 20px;
+}
+
+.line {
+  width: 400px;
+  height: 1px;
+  border-radius: 100px;
+  background-color: #f9dc3e;
+  margin-bottom: 20px;
+}
+
+/*  */
+
+.btn_container {
+  margin-bottom: 30px;
+  display: flex;
+  align-items: center;
+  justify-content:flex-start;
+  width: 300px;
+}
+
+.file_img {
+  width: 40px;
+  -webkit-app-region: no-drag;
+}
+
+.file_title {
+  font-size: 12px;
+  margin-left: 30px;
+}
+
+/*  */
+
+.create_btn {
+  width: 150px;
+  height: 40px;
+  border-radius: 10px;
+  background-color: #f9dc3e;
+  color: #323330;
+  border: 0px solid black;
+  font-weight: 600;
+  -webkit-app-region: no-drag;
+}
+
+
+.info_reset {
+  font-size: 12px;
+  margin-top: 10px;
+  font-weight: 100;
+}
+
+
+.status_block {
+  margin-top: 20px;
+  font-weight: 300;
+}
+
+
+.status_file {
+  margin-top: 10px;
+
+  
+}
+
+.status_file {
+  margin-top: 10px;
+  font-size: 10px;
+  font-weight: 200;
+}
+
+
+
+/* aniamtion */
+
+
+.file_img:active {
+  transform: scale(1.20);
+  transition: 0.05s all ease;
+}
+
+

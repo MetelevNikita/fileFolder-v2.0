@@ -3,10 +3,7 @@ const fs = require("fs");
 const autoenc = require("node-autodetect-utf8-cp1251-cp866");
 const ipcRenderer = require("electron").ipcRenderer;
 
-// 
-
-
-const finalCopyFileArr = []
+//
 
 
 const getInputFile = async (inputPath) => {
@@ -41,7 +38,7 @@ const createOutputFolder = (outputPath, subFolder) => {
 
 
 
-const copyFile = (sourcePath, targetPath, arr) => {
+const copyFile = (sourcePath, targetPath) => {
 
   try {
 
@@ -51,7 +48,7 @@ const copyFile = (sourcePath, targetPath, arr) => {
       fs.copyFileSync(sourcePath, targetPath);
       ipcRenderer.invoke('start-copy', targetPath)
     }
-    
+
   } catch (error) {
     console.log('Файл уже существует или отсутствует', error);
   }
@@ -74,7 +71,7 @@ window.myAPI = {
       return filesInput.push(path.parse(`\\${arr[1]}`))
     })
 
-    
+
     const folder = filesInput.map((item) => {
       const arrPath = item.dir.split('\\')
       return arrPath[arrPath.length-1]
@@ -99,7 +96,7 @@ window.myAPI = {
 
     console.log('Все файлы усапешно загружены')
     ipcRenderer.send("set-status", "Загрузка файлов завершена!");
-  
+
   },
 
   statusCopied: async (inputPath, outputPath) => {
@@ -143,7 +140,7 @@ window.myAPI = {
           if (pathBaseName.ext !== '.SLIni') {
             rootDirectoryArr.push(`${outputPath}\\${folder}\\${file}`);
           }
-        
+
         });
       });
     }
@@ -152,7 +149,7 @@ window.myAPI = {
 
     statusObj.copiedFiles = rootDirectoryArr.length
     statusObj.files = filesInput.length
-    
+
     return statusObj
 
   },
@@ -178,10 +175,12 @@ window.myAPI = {
       }
     });
 
-    const data = fs.writeFileSync(inputPath, pathString.join("\n"));
-    const res = new TextDecoder("cp1251").decode(data);
 
+  
+    const data = fs.writeFileSync(inputPath, pathString.join("\n"), {encoding: 'utf-16le'});
     console.log("конвертация файла завершена");
-    return res;
+    
+
+    return data
   },
 };

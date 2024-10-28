@@ -86,7 +86,7 @@ ipcMain.handle('open-folder', async (event, arg) => {
 // status
 
 
-ipcMain.handle('set-status', (event, title) => {
+ipcMain.on('set-status', (event, title) => {
   console.log(event)
   dialog.showMessageBox({title: 'Результат', message: title})
 })

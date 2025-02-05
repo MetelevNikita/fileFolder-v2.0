@@ -1,33 +1,145 @@
 const path = require("path");
 const fs = require("fs");
 const autoenc = require("node-autodetect-utf8-cp1251-cp866");
-const ipcRenderer = require("electron").ipcRenderer;
+const { ipcRenderer } = require('electron');
 
 //
 
 
-const getInputFile = async (inputPath) => {
-  return fs.promises.readFile(inputPath).then((data) => {
+
+let arrFiles = []
+let res =''
+let data = {
+  file: '',
+  progress: 0,
+  deleteFiles: 0,
+  copiedFiles: 0
+}
+
+
+// получаем данные с Входного файла и выходной папки
+
+
+const getInputFile = (inputAirFile) => {
+
+  try {
+
+    const data = fs.readFileSync(inputAirFile)
     const encoding = autoenc.detectEncoding(data).encoding;
+
+
+
+
 
     let text = "";
 
-    if (encoding === "cp1251") {
-      text = new TextDecoder("cp1251").decode(data).split("\n");
-    } else {
-      text = new TextDecoder("utf8").decode(data).split("\n");
-    }
+      if (encoding === "cp1251") {
+        text = new TextDecoder("cp1251").decode(data).replace(/\r/g, "").split("\n");
+      } else {
+        text = new TextDecoder("utf8").decode(data).replace(/\r/g, "").split("\n");
+      }
+
+
     return text;
-  });
+
+  } catch (error) {
+    console.log(`Входной файл получен с ошибкой ${error.message}`)
+  }
+
+
 };
+
+
+const getOutputFile = (outputPath) => {
+  try {
+
+    const outputhFolderPath = fs.readdirSync(outputPath, {encoding: 'utf8'})
+
+    const outputArr = outputhFolderPath.map((item) => {
+      return  fs.readdirSync(`${outputPath}\\${item}`, { withFileTypes: true }).map((item) => {
+        const fileName = `${item.parentPath}\\${item.name}`;
+        return fileName
+
+      });
+    }).flatMap((item) => item).filter((item) => {
+      const list = path.parse(item).ext
+      return list !== '.SLIni'
+    })
+
+    return outputArr
+
+  } catch (error) {
+    console.log('Не удалось получить выходную папку')
+  }
+}
+
+
+
+//
+
+
+const getUniqFiles = async (inputFile, outputPath) => {
+
+  try {
+
+    const inputFileList = getInputFile(inputFile)
+    const outputPathList = getOutputFile(outputPath)
+
+    //
+
+    const arrInputList = inputFileList.filter((item) => item !== '').filter((item) => item !== '\r').map((item) => {
+
+      const parts = item.split(' ')
+      if(parts[0] !== 'movie') {
+        return
+      }
+
+        const secondHalf = parts.slice(2).join(' ')
+        const pathParse = path.parse(secondHalf)
+
+        //
+
+        const fileName = pathParse.name
+        const fileExt = pathParse.ext
+        const outputDir = pathParse.dir.split('\\').slice(-1)
+
+        return [`${outputPath}\\${outputDir}\\${fileName}${fileExt}`].join(' ')
+    })
+
+
+    const deleteFiles = outputPathList.filter((item) => {
+      if(!arrInputList.includes(item)) {
+        return item
+      }
+    })
+
+    const uniqFiles = arrInputList.filter((item) => {
+      if(!outputPathList.includes(item)) {
+        return item
+      }
+    })
+
+
+    data.deleteFiles = deleteFiles.length
+    data.copiedFiles = (uniqFiles.length === 0) ? 0 : uniqFiles.length - 1
+
+  } catch (error) {
+    console.log(`Не удалось получить данные о копировании файлов ${error.message}`)
+  }
+
+}
+
+
 
 const createOutputFolder = (outputPath, subFolder) => {
 
   try {
 
     subFolder.forEach((folder) => {
-      fs.mkdirSync(`${outputPath}/${folder}`, {recursive: true})
-      console.log(`Cозданы папки ${folder}`)
+
+      if(folder !== undefined) {
+        fs.mkdirSync(`${outputPath}/${folder}`, {recursive: true})
+      }
     })
 
   } catch (error) {
@@ -37,150 +149,220 @@ const createOutputFolder = (outputPath, subFolder) => {
 }
 
 
-
 const copyFile = (sourcePath, targetPath) => {
 
   try {
 
     if (!fs.existsSync(targetPath)) {    // Копирование файла
 
-      console.log(`Копирую файл ${targetPath}`)
+      const pathParse = path.parse(targetPath)
+
+      if(pathParse.ext !== '.SLIni') {
+        arrFiles.push(targetPath)
+        data.progress = arrFiles.length
+        console.log(`Копирую файл .mp4 ${targetPath}`)
+        data.file = targetPath
+        ipcRenderer.send('copy-progress', JSON.stringify(data))
+        fs.copyFileSync(sourcePath, targetPath);
+      }
+
+
+      console.log(`Копирую файл .Slini ${targetPath}`)
+      data.file = targetPath
       fs.copyFileSync(sourcePath, targetPath);
-      ipcRenderer.invoke('start-copy', targetPath)
+
+    } else {
+      console.log(`Файл ${targetPath} уже существует`)
+      return
     }
 
   } catch (error) {
-    console.log('Файл уже существует или отсутствует', error);
+    console.log('Ошибка копирования', error);
   }
 }
 
 
-window.myAPI = {
+const deleteFile = async (inputFile, outputPath) => {
+  try {
 
-  copiedFiles: async (inputPath, outputPath) => {
+    const inputFileList = getInputFile(inputFile)
+    const outputPathList = getOutputFile(outputPath)
 
-    const text = await getInputFile(inputPath);
-    const filesInput = []
+    //
 
-    text.filter((item) => {
-      const arr = item.replace('\r', '').split('\\\\')
 
-      if(arr[1] === undefined) {
+    const arrInputList = inputFileList.filter((item) => item !== '').map((item) => {
+
+      const parts = item.split(' ')
+      if(parts[0] !== 'movie') {
         return
       }
-      return filesInput.push(path.parse(`\\${arr[1]}`))
+
+        const secondHalf = parts.slice(2).join(' ')
+        const pathParse = path.parse(secondHalf)
+
+        //
+
+        const fileName = pathParse.name
+        const fileExt = pathParse.ext
+        const outputDir = pathParse.dir.split('\\').slice(-1)
+
+        return `${outputPath}\\${outputDir}\\${fileName}${fileExt}`
     })
 
 
-    const folder = filesInput.map((item) => {
-      const arrPath = item.dir.split('\\')
-      return arrPath[arrPath.length-1]
+
+    console.log(arrInputList)
+    console.log(outputPathList)
+
+
+
+
+
+    outputPathList.filter((item) => {
+
+      if(!arrInputList.includes(item)) {
+        console.log(`Удалены файлы ${item}`)
+        fs.unlinkSync(item)
+      }
     })
 
 
-    const setFolder = new Set(folder)
+  } catch (error) {
+    console.log('Ошибка удаления файла', error);
+  }
+}
+
+
+
+
+
+
+
+
+
+
+window.myAPI = {
+
+  copiedFiles: async (inputFile, outputPath) => {
+
+    getUniqFiles(inputFile, outputPath)
+
+    if(data.copiedFiles === 0) {
+      return
+    }
+
+    ipcRenderer.send('start', JSON.stringify(data))
+    res = 'Загрузка...'
+
+    // Находим уникальные папки в списке
+
+    const inputFileList = getInputFile(inputFile);
+
+    const setFolder = inputFileList.filter((item) => item !== '').filter((item) => item !== '\r').map((item) => {
+
+      const parts = item.split(' ')
+      if(parts[0] !== 'movie') {
+        return
+      }
+
+        const secondHalf = parts.slice(2).join(',')
+        const pathParse = path.parse(secondHalf)
+
+        //
+        const folder = pathParse.dir.split('\\').slice(-1)
+        console.log(folder)
+        return folder
+    })
+
+
+    const uniqFolder = [...new Set(setFolder)]
     createOutputFolder(outputPath, setFolder)
 
 
-
-    filesInput.forEach((item) => {
-
-      const inputPath = `\\${item.dir}`
-      const fileName = item.name
-
-      const arrPath = item.dir.split('\\')
-      const outputFolder = arrPath[arrPath.length-1]
-      copyFile(`${inputPath}/${fileName}.mp4`, `${outputPath}/${outputFolder}/${fileName}.mp4`)
-      copyFile(`${inputPath}/${fileName}.SLIni`, `${outputPath}/${outputFolder}/${fileName}.SLIni`)
-    })
-
-    console.log('Все файлы усапешно загружены')
-    ipcRenderer.send("set-status", "Загрузка файлов завершена!");
-
-  },
-
-  statusCopied: async (inputPath, outputPath) => {
+    // Копируем файлы
 
 
-    const statusObj = {
-      folders: [],
-      files: '',
-      copiedFiles: ''
-    }
+    inputFileList.filter((item) => item !== '').filter((item) => item !== '\r').map((item) => {
 
-    // input file
-
-    const text = await getInputFile(inputPath);
-    const filesInput = []
-
-    text.filter((item) => {
-      const arr = item.replace('\r', '').split('\\\\')
-
-      if(arr[1] === undefined) {
+      const parts = item.split(' ')
+      if(parts[0] !== 'movie') {
         return
       }
-      return filesInput.push(`\\${arr[1]}`)
+
+        const secondHalf = parts.slice(2).join(' ')
+        const parsePath = path.parse(secondHalf)
+
+
+        //
+
+        const subFolderName = parsePath.dir.split('\\').slice(-1)
+
+        copyFile(`${parsePath.dir}\\${parsePath.name}.mp4`, `${outputPath}\\${subFolderName}\\${parsePath.name}.mp4`)
+        copyFile(`${parsePath.dir}\\${parsePath.name}.SLIni`, `${outputPath}\\${subFolderName}\\${parsePath.name}.SLIni`)
+
+
     })
 
-    // root directory
 
-    const rootDirectory = fs.readdirSync(outputPath);
-    const rootDirectoryArr = [];
+    deleteFile(inputFile, outputPath)
 
-    if (rootDirectory.length === 0) {
-      console.log("корневая папка пуста");
-    } else {
-      rootDirectory.forEach((folder) => {
-        statusObj.folders.push(folder)
-        const folders = fs.readdirSync(`${outputPath}\\${folder}`);
-
-        folders.forEach((file) => {
-          const pathBaseName = path.parse(file)
-
-          if (pathBaseName.ext !== '.SLIni') {
-            rootDirectoryArr.push(`${outputPath}\\${folder}\\${file}`);
-          }
-
-        });
-      });
-    }
-
-
-
-    statusObj.copiedFiles = rootDirectoryArr.length
-    statusObj.files = filesInput.length
-
-    return statusObj
+    res = JSON.stringify(data)
+    return res
 
   },
+
 
   convertFile: async (inputPath, outputPath) => {
-    const text = await getInputFile(inputPath);
+    const inputFileList = getInputFile(inputPath);
 
-    const pathString = text.map((item) => {
-      const arr = item.replace(/\r\n/g, "\n").split("\\\\");
+    const newList = inputFileList.filter((item) => item !== '').filter((item) => item !== '\r').map((item) => {
 
-      if (arr[1]) {
-        const pathFile = path.parse(arr[1]);
+      const parts = item.split(' ')
 
-        const pathName = pathFile.base;
-        const pathDir = pathFile.dir.split("\\");
 
-        return [
-          arr[0],
-          `${outputPath}\\${pathDir[pathDir.length - 1]}\\${pathName}`,
-        ].join("");
-      } else {
-        return arr[0];
+      if(parts[0] !== 'movie') {
+        return parts.join(' ')
       }
-    });
+
+        const firstHalf = parts.slice(0, 2).join(' ')
+        const secondHalf = parts.slice(2).join(' ')
 
 
-  
-    const data = fs.writeFileSync(inputPath, pathString.join("\n"), {encoding: 'utf-16le'});
-    console.log("конвертация файла завершена");
-    
+        const pathParse = path.parse(secondHalf)
 
-    return data
-  },
+        //
+
+        const fileName = pathParse.name
+        const fileExt = pathParse.ext
+        const outputDir = pathParse.dir.split('\\').slice(-1)
+
+        return [firstHalf, `${outputPath}\\${outputDir}\\${fileName}${fileExt}`].join(' ')
+    })
+
+    const finalConvertation = fs.writeFileSync(inputPath, newList.join("\n"), {encoding: 'utf-16le'})
+    return finalConvertation
+
+  }
+
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

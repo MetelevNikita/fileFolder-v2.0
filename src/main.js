@@ -15,7 +15,7 @@ const createWindow = () => {
 
   const mainWindow = new BrowserWindow({
     width: 700,
-    height: 520,
+    height: 560,
     webPreferences: {
       contextIsolation: false,
       nodeIntegration: true,
@@ -34,6 +34,7 @@ const createWindow = () => {
 
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
   mainWindow.setMenuBarVisibility(false);
+  mainWindow.openDevTools();
 
 
 };
@@ -89,9 +90,10 @@ let progressBar
 
 
 ipcMain.on('start', (event, arg) => {
-  console.log(arg)
   info = JSON.parse(arg)
 })
+
+
 
 
 ipcMain.on('start', (event, arg) => {
@@ -103,7 +105,7 @@ ipcMain.on('start', (event, arg) => {
     text: 'Копирование файлов',
     detail: `Загружаю файл ${data.file}`,
     initialValue: 0,
-    maxValue: data.copiedFiles
+    maxValue: data.copiedFiles,
   })
 
 })
@@ -113,21 +115,40 @@ ipcMain.on('copy-progress', (event, arg) => {
 
     const data = JSON.parse(arg)
 
-
-
     progressBar.value = data.progress
 
     progressBar.on('completed', () => {
-      console.log(`Загружено`)
-      progressBar.detail = 'Файлы закгружены.';
+      console.log(`complete`)
+      progressBar.detail = 'Файлы загружены.';
     }).on('aborted', () => {
       console.log('aborted')
+
+
     }).on('progress', (progress) => {
       progressBar.detail = `Загружено ${progress} файлов. Текущее копирование ${data.file}`
     })
 
 
 })
+
+
+
+
+ipcMain.on('set-progressbar-completed', setProgressbarCompleted);
+
+
+
+
+
+
+function setProgressbarCompleted () {
+	if (progressBar) {
+		progressBar.setCompleted();
+	}
+}
+
+
+
 
 
 

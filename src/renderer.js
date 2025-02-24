@@ -47,10 +47,6 @@ inputFile.addEventListener('click', async () => {
 outputFile.addEventListener('click', async () => {
   const  folder  = await ipc.invoke('open-folder');
 
-
-  console.log(folder.filePaths[0])
-
-
   fileTitleOutput.textContent = folder.filePaths[0]
 
   if(fileTitleOutput.textContent === '') {
@@ -78,10 +74,9 @@ createBtn.addEventListener('click', async () => {
   const finalConvertation = await window.myAPI.convertFile(fileTitleInput.textContent, fileTitleOutput.textContent);
 
 
-  console.log(finalConvertation)
   console.log(data)
-  const info = JSON.parse(data)
 
+  const info = JSON.parse(data)
   statusBlock.innerText = `Загрузка завершена \n\n Скопировано файлов: ${info.copiedFiles} \n\n Удаено файлов: ${info.deleteFiles}`
 
 })

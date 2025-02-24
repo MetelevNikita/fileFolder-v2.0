@@ -12,7 +12,6 @@ let res =''
 let data = {
   file: '',
   progress: 0,
-  deleteFiles: 0,
   copiedFiles: 0
 }
 
@@ -26,10 +25,6 @@ const getInputFile = (inputAirFile) => {
 
     const data = fs.readFileSync(inputAirFile)
     const encoding = autoenc.detectEncoding(data).encoding;
-
-
-
-
 
     let text = "";
 
@@ -88,24 +83,20 @@ const getUniqFiles = async (inputFile, outputPath) => {
     //
 
     const arrInputList = inputFileList.filter((item) => item !== '').filter((item) => item !== '\r').map((item) => {
+      const parts = item.split(' \\')
 
-      const parts = item.split(' ')
-      if(parts[0] !== 'movie') {
-        return
+      if (parts.length > 1) {
+
+        const stringPath = path.parse(parts[1])
+
+
+        const endDir = stringPath.dir.split('\\').slice(-1)
+        const fileName = stringPath.name
+        const fileExt = stringPath.ext
+
+        return `${outputPath}\\${endDir}\\${fileName}${fileExt}`
       }
-
-        const secondHalf = parts.slice(2).join(' ')
-        const pathParse = path.parse(secondHalf)
-
-        //
-
-        const fileName = pathParse.name
-        const fileExt = pathParse.ext
-        const outputDir = pathParse.dir.split('\\').slice(-1)
-
-        return [`${outputPath}\\${outputDir}\\${fileName}${fileExt}`].join(' ')
     })
-
 
     const deleteFiles = outputPathList.filter((item) => {
       if(!arrInputList.includes(item)) {
@@ -118,16 +109,28 @@ const getUniqFiles = async (inputFile, outputPath) => {
         return item
       }
     })
+    const setFiles = [...new Set(uniqFiles)]
 
+
+
+    // console.log(setFiles)
+    // console.log(deleteFiles)
+
+    //
 
     data.deleteFiles = deleteFiles.length
-    data.copiedFiles = (uniqFiles.length === 0) ? 0 : uniqFiles.length - 1
+    data.copiedFiles = (setFiles.length === 0) ? 0 : setFiles.length
+
+    //
+
 
   } catch (error) {
     console.log(`Не удалось получить данные о копировании файлов ${error.message}`)
   }
 
 }
+
+
 
 
 
@@ -158,18 +161,26 @@ const copyFile = (sourcePath, targetPath) => {
       const pathParse = path.parse(targetPath)
 
       if(pathParse.ext !== '.SLIni') {
+
         arrFiles.push(targetPath)
+        console.log(arrFiles)
         data.progress = arrFiles.length
-        console.log(`Копирую файл .mp4 ${targetPath}`)
+        // console.log(`Копирую файл ${targetPath}`)
         data.file = targetPath
         ipcRenderer.send('copy-progress', JSON.stringify(data))
         fs.copyFileSync(sourcePath, targetPath);
+
+      } else {
+
+        // console.log(`Копирую файл ${targetPath}`)
+        data.file = targetPath
+        fs.copyFileSync(sourcePath, targetPath);
+
       }
 
 
-      console.log(`Копирую файл .Slini ${targetPath}`)
-      data.file = targetPath
-      fs.copyFileSync(sourcePath, targetPath);
+
+
 
     } else {
       console.log(`Файл ${targetPath} уже существует`)
@@ -185,43 +196,39 @@ const copyFile = (sourcePath, targetPath) => {
 const deleteFile = async (inputFile, outputPath) => {
   try {
 
+
+    ipcRenderer.send('delete-start', JSON.stringify(data))
+
     const inputFileList = getInputFile(inputFile)
     const outputPathList = getOutputFile(outputPath)
 
     //
 
 
-    const arrInputList = inputFileList.filter((item) => item !== '').map((item) => {
+    const arrInputList = inputFileList.filter((item) => item !== '').filter((item) => item !== '\r').map((item) => {
+      const parts = item.split(' \\')
 
-      const parts = item.split(' ')
-      if(parts[0] !== 'movie') {
+      if (parts.length > 1) {
+
+        const stringPath = path.parse(parts[1])
+
+
+        const endDir = stringPath.dir.split('\\').slice(-1)
+        const fileName = stringPath.name
+        const fileExt = stringPath.ext
+
+        return `${outputPath}\\${endDir}\\${fileName}${fileExt}`
+      } else {
         return
       }
-
-        const secondHalf = parts.slice(2).join(' ')
-        const pathParse = path.parse(secondHalf)
-
-        //
-
-        const fileName = pathParse.name
-        const fileExt = pathParse.ext
-        const outputDir = pathParse.dir.split('\\').slice(-1)
-
-        return `${outputPath}\\${outputDir}\\${fileName}${fileExt}`
     })
-
-
-
-    console.log(arrInputList)
-    console.log(outputPathList)
-
-
+    const setInputFiles = [...new Set(arrInputList)]
 
 
 
     outputPathList.filter((item) => {
 
-      if(!arrInputList.includes(item)) {
+      if(!setInputFiles.includes(item)) {
         console.log(`Удалены файлы ${item}`)
         fs.unlinkSync(item)
       }
@@ -260,51 +267,51 @@ window.myAPI = {
     const inputFileList = getInputFile(inputFile);
 
     const setFolder = inputFileList.filter((item) => item !== '').filter((item) => item !== '\r').map((item) => {
+      const parts = item.split(' \\')
 
-      const parts = item.split(' ')
-      if(parts[0] !== 'movie') {
-        return
-      }
+      if (parts.length > 1) {
 
-        const secondHalf = parts.slice(2).join(',')
-        const pathParse = path.parse(secondHalf)
+        const stringPath = path.parse(parts[1])
 
-        //
-        const folder = pathParse.dir.split('\\').slice(-1)
-        console.log(folder)
+
+        const folder = stringPath.dir.split('\\').slice(-1)
         return folder
+      }
     })
 
 
     const uniqFolder = [...new Set(setFolder)]
-    createOutputFolder(outputPath, setFolder)
+    createOutputFolder(outputPath, uniqFolder)
+
+
+    console.log('Папки созданы')
 
 
     // Копируем файлы
 
 
-    inputFileList.filter((item) => item !== '').filter((item) => item !== '\r').map((item) => {
+    const setFiles = [...new Set(inputFileList)]
 
-      const parts = item.split(' ')
-      if(parts[0] !== 'movie') {
-        return
+
+    setFiles.filter((item) => item !== '').filter((item) => item !== '\r').map((item) => {
+      const parts = item.split(' \\')
+
+      if (parts.length > 1) {
+
+        const stringPath = path.parse(parts[1])
+
+
+
+        const endDir = stringPath.dir.split('\\').slice(-1)
+        const fileName = stringPath.name
+        const fileExt = stringPath.ext
+
+        copyFile(`\\${stringPath.dir}\\${stringPath.name}.mp4`, `${outputPath}\\${endDir}\\${fileName}.mp4`)
+        copyFile(`\\${stringPath.dir}\\${stringPath.name}.SLIni`, `${outputPath}\\${endDir}\\${fileName}.SLIni`)
       }
-
-        const secondHalf = parts.slice(2).join(' ')
-        const parsePath = path.parse(secondHalf)
-
-
-        //
-
-        const subFolderName = parsePath.dir.split('\\').slice(-1)
-
-        copyFile(`${parsePath.dir}\\${parsePath.name}.mp4`, `${outputPath}\\${subFolderName}\\${parsePath.name}.mp4`)
-        copyFile(`${parsePath.dir}\\${parsePath.name}.SLIni`, `${outputPath}\\${subFolderName}\\${parsePath.name}.SLIni`)
-
-
     })
 
-
+    ipcRenderer.send('set-progressbar-completed')
     deleteFile(inputFile, outputPath)
 
     res = JSON.stringify(data)
@@ -316,36 +323,36 @@ window.myAPI = {
   convertFile: async (inputPath, outputPath) => {
     const inputFileList = getInputFile(inputPath);
 
-    const newList = inputFileList.filter((item) => item !== '').filter((item) => item !== '\r').map((item) => {
+    const arrInputList = inputFileList.filter((item) => item !== '').filter((item) => item !== '\r').map((item) => {
+      const parts = item.split(' \\')
 
-      const parts = item.split(' ')
+      if (parts.length > 1) {
+
+        const stringPath = path.parse(parts[1])
 
 
-      if(parts[0] !== 'movie') {
+        const endDir = stringPath.dir.split('\\').slice(-1)
+        const fileName = stringPath.name
+        const fileExt = stringPath.ext
+
+        return [parts[0], `${outputPath}\\${endDir}\\${fileName}${fileExt}`].join(' ')
+      } else {
         return parts.join(' ')
       }
-
-        const firstHalf = parts.slice(0, 2).join(' ')
-        const secondHalf = parts.slice(2).join(' ')
-
-
-        const pathParse = path.parse(secondHalf)
-
-        //
-
-        const fileName = pathParse.name
-        const fileExt = pathParse.ext
-        const outputDir = pathParse.dir.split('\\').slice(-1)
-
-        return [firstHalf, `${outputPath}\\${outputDir}\\${fileName}${fileExt}`].join(' ')
     })
 
-    const finalConvertation = fs.writeFileSync(inputPath, newList.join("\n"), {encoding: 'utf-16le'})
+    const finalConvertation = fs.writeFileSync(inputPath, arrInputList.join("\n"), {encoding: 'utf-16le'})
     return finalConvertation
 
   }
 
 };
+
+
+
+
+
+
 
 
 

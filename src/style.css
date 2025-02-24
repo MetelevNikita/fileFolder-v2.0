@@ -1,8 +1,25 @@
+
+/* fonts */
+
+@font-face {
+  font-family: 'Trade Winds';
+  src: url('./fonts/Trade_Winds/TradeWinds-Regular.ttf');
+}
+
+@font-face {
+  font-family: 'Roboto';
+  src: url('./fonts/Roboto/Roboto-VariableFont_wdth\,wght.ttf');
+}
+
+
+/*  */
+
+
 body {
 
   background: #323330;
   color: white;
-  font-family: "Montserrat", serif;
+  font-family: 'Roboto';
 
 }
 
@@ -29,12 +46,13 @@ body {
 
 .title {
 
-  font-family: "Trade Winds", serif;
+  font-family: 'Trade Winds';
   font-size: 28px;
   font-weight: 400;
   color: #f9dc3e;
   margin-left: 20px;
-  
+  margin-bottom: 20px;
+
 
 }
 
@@ -48,6 +66,7 @@ body {
   font-style: italic;
   font-size: 12px;
   margin-bottom: 20px;
+  margin-top: 10px;
 }
 
 .line {
@@ -94,21 +113,24 @@ body {
 
 .info_reset {
   font-size: 12px;
-  margin-top: 10px;
+  margin-top: 20px;
   font-weight: 100;
 }
 
 
 .status_block {
-  margin-top: 20px;
-  font-weight: 300;
+  margin-top: 12px;
+  font-weight: 100;
+  text-align: center;
 }
 
 
 .status_file {
   margin-top: 10px;
+  font-size: 12px;
 
-  
+
+
 }
 
 .status_file {
@@ -125,6 +147,13 @@ body {
 .file_img:active {
   transform: scale(1.20);
   transition: 0.05s all ease;
+}
+
+
+.version {
+  margin-top: 20px;
+  font-weight: 200;
+  font-size: 12px;
 }
 
 

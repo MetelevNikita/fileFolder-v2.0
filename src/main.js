@@ -15,7 +15,7 @@ const createWindow = () => {
 
   const mainWindow = new BrowserWindow({
     width: 700,
-    height: 500,
+    height: 560,
     webPreferences: {
       contextIsolation: false,
       nodeIntegration: true,
@@ -28,12 +28,13 @@ const createWindow = () => {
       color: '#323330',
       symbolColor: '#f9dc3e'
     }
-    
+
   });
 
 
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
   mainWindow.setMenuBarVisibility(false);
+  mainWindow.openDevTools();
 
 
 };
@@ -66,8 +67,6 @@ ipcMain.handle('open-file', async (event, arg) => {
     properties: ['openFile'],
     filters: [{ name: 'Text Files', extensions: ['txt', 'air'] }]
   })
-
-  console.log(file)
   return file
 })
 
@@ -76,61 +75,80 @@ ipcMain.handle('open-folder', async (event, arg) => {
   const folder = await dialog.showOpenDialog({
     properties: ['openDirectory']
   })
-
-  console.log(folder)
   return folder
 })
 
 
 
-// status
+//
 
 
-ipcMain.on('set-status', (event, title) => {
-  console.log(event)
-  dialog.showMessageBox({title: 'Результат', message: title})
+ipcMain.handle('start-copy', (event, files, arr) => {})
+
+
+let progressBar
+
+
+ipcMain.on('start', (event, arg) => {
+  info = JSON.parse(arg)
 })
 
 
 
-// 
+
+ipcMain.on('start', (event, arg) => {
+    const data = JSON.parse(arg)
+
+    progressBar = new ProgressBar({
+    indeterminate: false,
+    title: 'Загрузка файлов',
+    text: 'Копирование файлов',
+    detail: `Загружаю файл ${data.file}`,
+    initialValue: 0,
+    maxValue: data.copiedFiles,
+  })
+
+})
 
 
+ipcMain.on('copy-progress', (event, arg) => {
+
+    const data = JSON.parse(arg)
+
+    progressBar.value = data.progress
+
+    progressBar.on('completed', () => {
+      console.log(`complete`)
+      progressBar.detail = 'Файлы загружены.';
+    }).on('aborted', () => {
+      console.log('aborted')
 
 
-
-ipcMain.handle('start-copy', (event, files, arr) => {
-
- let progressBar = new ProgressBar({
-  indeterminate: true,
-  title: 'Загрузка файлов',
-  text: 'Определение вермени.....',
-  detail: `Загружаю файл ${files}`,
- })
+    }).on('progress', (progress) => {
+      progressBar.detail = `Загружено ${progress} файлов. Текущее копирование ${data.file}`
+    })
 
 
- console.log(files)
-
-
-
-const wathcer = chokidar.watch(files, {
-  persistent: true
 })
 
 
-wathcer.on('add', (path) => {
-  console.log(`File copy  -   ${path}`)
 
-  if(path) {
-    setTimeout(() => {
-      progressBar.setCompleted()
-    }, 3000)
-  }
-})
+
+ipcMain.on('set-progressbar-completed', setProgressbarCompleted);
 
 
 
-})
+
+
+
+function setProgressbarCompleted () {
+	if (progressBar) {
+		progressBar.setCompleted();
+	}
+}
+
+
+
 
 
 
